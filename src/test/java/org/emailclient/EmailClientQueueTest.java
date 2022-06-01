@@ -1,18 +1,17 @@
 package org.emailclient;
 
+import org.emailclient.queues.EmailClientQueue;
+import org.emailclient.queues.IEmailClientQueue;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.Properties;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.emailclient.TestConstants.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 class EmailClientQueueTest {
 
-    final static String userName = "";
-    final static String password = "";
-    final static String fromEmail = "";
-    final static List<String> toRecipients = List.of("");
 
     @Test
     void testQueue() {
@@ -28,7 +27,8 @@ class EmailClientQueueTest {
         final EmailClient sender = EmailClient.create(props, userName, password);
 
 
-        final EmailClientQueue queue = EmailClientQueue.create();
+        final IEmailClientQueue<EmailNotification> queue = EmailClientQueue.create();
+        queue.start();
 
         try {
 

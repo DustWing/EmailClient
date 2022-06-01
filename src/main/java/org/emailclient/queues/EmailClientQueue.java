@@ -1,5 +1,7 @@
-package org.emailclient;
+package org.emailclient.queues;
 
+import org.emailclient.EmailNotification;
+import org.emailclient.IEmailSender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,7 +11,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class EmailClientQueue {
+public class EmailClientQueue implements IEmailClientQueue<EmailNotification> {
 
     private final static Logger sLogger = LoggerFactory.getLogger(EmailClientQueue.class);
 
@@ -20,21 +22,21 @@ public class EmailClientQueue {
 
     public static EmailClientQueue create() {
 
-        final EmailClientQueue emailClientQueue = new EmailClientQueue(
+        return new EmailClientQueue(
                 new LinkedBlockingQueue<>()
         );
-        emailClientQueue.run();
-        return emailClientQueue;
     }
 
     public EmailClientQueue(
             BlockingQueue<QueueItem> queue
     ) {
         this.queue = queue;
+
     }
 
+    @Override
     public void add(
-            IEmailSender emailSender, EmailNotification notification
+            IEmailSender<EmailNotification> emailSender, EmailNotification notification
     ) {
 
         this.queue.add(
@@ -45,7 +47,8 @@ public class EmailClientQueue {
         );
     }
 
-    public void run() {
+    @Override
+    public void start() {
 
         executorService.submit(
                 () -> {
@@ -72,14 +75,17 @@ public class EmailClientQueue {
         );
     }
 
+    @Override
     public void resume() {
         isRunning.set(true);
     }
 
+    @Override
     public void pause() {
         isRunning.set(false);
     }
 
+    @Override
     public void shutdown() {
         sLogger.debug("Shutting down....");
         executorService.shutdown();
@@ -88,16 +94,16 @@ public class EmailClientQueue {
 
     private static class QueueItem {
 
-        private final IEmailSender emailSender;
+        private final IEmailSender<EmailNotification> emailSender;
         private final EmailNotification notification;
 
 
-        private QueueItem(IEmailSender emailSender, EmailNotification notification) {
+        private QueueItem(IEmailSender<EmailNotification> emailSender, EmailNotification notification) {
             this.emailSender = emailSender;
             this.notification = notification;
         }
 
-        public IEmailSender getEmailSender() {
+        public IEmailSender<EmailNotification> getEmailSender() {
             return emailSender;
         }
 

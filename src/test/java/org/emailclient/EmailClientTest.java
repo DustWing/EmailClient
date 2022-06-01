@@ -6,21 +6,16 @@ import java.io.File;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
+import static org.emailclient.TestConstants.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class EmailClientTest {
 
-    final static String userName = "";
-    final static String password = "";
-    final static String fromEmail = "";
-    final static List<String> toRecipients = List.of("");
-    final static List<String> ccRecipients = List.of("");
-    final static List<String> bccRecipients = List.of("");
 
 
     @Test
@@ -47,8 +42,7 @@ class EmailClientTest {
 
 
         try {
-            client.send(notification);
-            assertTrue(true);
+            assertTrue(client.send(notification));
         } catch (EmailNotificationException ex) {
             ex.printStackTrace();
             fail();
@@ -82,8 +76,7 @@ class EmailClientTest {
 
 
         try {
-            client.send(notification);
-            assertTrue(true);
+            assertTrue(client.send(notification));
         } catch (EmailNotificationException ex) {
             ex.printStackTrace();
             fail();
@@ -112,10 +105,13 @@ class EmailClientTest {
         var client = EmailClient.create(props, userName, password);
 
         try {
-            client.sendAsync(notification).exceptionally((ex) -> {
-                assertNull(ex);
-                return null;
-            }).get();
+
+            CompletableFuture.runAsync(() -> client.send(notification))
+                    .exceptionally((ex) -> {
+                        assertNull(ex);
+                        return null;
+                    }).get();
+
         } catch (InterruptedException | ExecutionException e) {
             fail(e);
         }
@@ -193,8 +189,7 @@ class EmailClientTest {
                 .build();
 
         try {
-            sender.send(notification);
-            assertTrue(true);
+            assertTrue(sender.send(notification));
         } catch (EmailNotificationException ex) {
             fail();
         }
@@ -202,9 +197,7 @@ class EmailClientTest {
 
     @Test
     void TestWithImages() {
-        try {
-
-            InputStream is = EmailClientTest.class.getClassLoader().getResourceAsStream("template/index.html");
+        try (InputStream is = EmailClientError.class.getClassLoader().getResourceAsStream("template/index.html")) {
 
 
             if (is == null) {
@@ -256,9 +249,7 @@ class EmailClientTest {
             final EmailClient client = EmailClient.create(props, userName, password);
 
 
-            client.send(notification);
-
-            assertTrue(true);
+            assertTrue(client.send(notification));
 
         } catch (Exception ex) {
             fail(ex);

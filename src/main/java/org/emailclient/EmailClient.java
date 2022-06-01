@@ -15,9 +15,8 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 
-public class EmailClient implements IEmailSender {
+public class EmailClient implements IEmailSender<EmailNotification> {
 
     final Session session;
 
@@ -26,6 +25,7 @@ public class EmailClient implements IEmailSender {
             final String user,
             final String password
     ) {
+
 
         final Session session = Session.getDefaultInstance(
                 properties,
@@ -53,19 +53,8 @@ public class EmailClient implements IEmailSender {
 
 
     @Override
-    public CompletableFuture<Void> sendAsync(final EmailNotification emailNotification) {
+    public boolean send(final EmailNotification emailNotification) {
 
-        return CompletableFuture.runAsync(
-                () -> send(emailNotification)
-        );
-    }
-
-    @Override
-    public void send(final EmailNotification emailNotification) {
-
-        if (emailNotification.getBody() == null && emailNotification.getBody().isBlank()) {
-            throw new IllegalArgumentException("Notification Body cannot be null");
-        }
         try {
 
             Message message = buildMessage(emailNotification, session);
@@ -76,60 +65,13 @@ public class EmailClient implements IEmailSender {
             throw new EmailNotificationException(e);
         }
 
-    }
-
-
-    private void setRecipients(final MimeMessage message, Collection<String> recipients, Message.RecipientType type) {
-
-        if (recipients == null) {
-            return;
-        }
-
-        recipients.forEach(
-                e -> {
-                    try {
-                        message.addRecipient(type, new InternetAddress(e));
-                    } catch (MessagingException ex) {
-                        throw new RuntimeException(ex);
-                    }
-                }
-        );
-    }
-
-    private void addImagesInBody(final Multipart multipart, final Map<String, File> mapInlineImages) throws MessagingException, IOException {
-        // adds inline image attachments
-
-        if (mapInlineImages == null || mapInlineImages.isEmpty()) {
-            return;
-        }
-
-        Set<String> setImageID = mapInlineImages.keySet();
-
-        for (String contentId : setImageID) {
-            MimeBodyPart imagePart = new MimeBodyPart();
-            imagePart.setHeader("Content-ID", "<" + contentId + ">");
-            imagePart.setDisposition(MimeBodyPart.INLINE);
-            imagePart.attachFile(mapInlineImages.get(contentId));
-            multipart.addBodyPart(imagePart);
-        }
+        return true;
 
     }
 
-    private void addAttachments(final Multipart multipart, Collection<EmailAttachment> attachments) throws MessagingException {
-
-        for (EmailAttachment att : attachments) {
-            // Part two is attachment
-            final BodyPart attachmentBodyPart = new MimeBodyPart();
-            final DataSource source = new ByteArrayDataSource(att.getContent(), att.getMimeType());
-
-            attachmentBodyPart.setDataHandler(new DataHandler(source));
-            attachmentBodyPart.setFileName(att.getFileName());
-
-            multipart.addBodyPart(attachmentBodyPart);
-        }
-    }
-
-    private Message buildMessage(final EmailNotification emailNotification, final Session session) throws MessagingException, IOException {
+    private Message buildMessage(
+            final EmailNotification emailNotification, final Session session
+    ) throws MessagingException, IOException {
         final boolean isHtml = emailNotification.isHtml();
         final String body = emailNotification.getBody();
 
@@ -214,5 +156,55 @@ public class EmailClient implements IEmailSender {
         message.setContent(multipart);
     }
 
+
+    private void setRecipients(final MimeMessage message, Collection<String> recipients, Message.RecipientType type) {
+
+        if (recipients == null) {
+            return;
+        }
+
+        recipients.forEach(
+                e -> {
+                    try {
+                        message.addRecipient(type, new InternetAddress(e));
+                    } catch (MessagingException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                }
+        );
+    }
+
+    private void addImagesInBody(final Multipart multipart, final Map<String, File> mapInlineImages) throws MessagingException, IOException {
+        // adds inline image attachments
+
+        if (mapInlineImages == null || mapInlineImages.isEmpty()) {
+            return;
+        }
+
+        Set<String> setImageID = mapInlineImages.keySet();
+
+        for (String contentId : setImageID) {
+            MimeBodyPart imagePart = new MimeBodyPart();
+            imagePart.setHeader("Content-ID", "<" + contentId + ">");
+            imagePart.setDisposition(MimeBodyPart.INLINE);
+            imagePart.attachFile(mapInlineImages.get(contentId));
+            multipart.addBodyPart(imagePart);
+        }
+
+    }
+
+    private void addAttachments(final Multipart multipart, Collection<EmailAttachment> attachments) throws MessagingException {
+
+        for (EmailAttachment att : attachments) {
+            // Part two is attachment
+            final BodyPart attachmentBodyPart = new MimeBodyPart();
+            final DataSource source = new ByteArrayDataSource(att.getContent(), att.getMimeType());
+
+            attachmentBodyPart.setDataHandler(new DataHandler(source));
+            attachmentBodyPart.setFileName(att.getFileName());
+
+            multipart.addBodyPart(attachmentBodyPart);
+        }
+    }
 
 }

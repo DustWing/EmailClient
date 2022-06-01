@@ -1,12 +1,8 @@
 package org.emailclient;
 
-import java.util.concurrent.CompletableFuture;
+public interface IEmailSender<T> {
 
-public interface IEmailSender {
-
-    CompletableFuture<Void> sendAsync(EmailNotification emailNotification);
-
-    void send(EmailNotification notification);
+    boolean send(T t);
 
 
 }
