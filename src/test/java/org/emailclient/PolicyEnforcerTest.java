@@ -38,11 +38,10 @@ public class PolicyEnforcerTest {
 
         SpamPolicy spamPolicy = new SpamPolicy(Duration.ofSeconds(4));
 
-
-        PolicyEnforcer<EmailNotification, Boolean> enforcer = new PolicyEnforcer<>(
-                List.of(spamPolicy),
-                retryPolicy
-        );
+        PolicyEnforcer<EmailNotification, Boolean> enforcer = PolicyEnforcer.<EmailNotification, Boolean>builder()
+                .withValidations(List.of(spamPolicy))
+                .retry(retryPolicy)
+                .build();
 
 
         assertThrowsExactly(
@@ -78,11 +77,10 @@ public class PolicyEnforcerTest {
         SpamPolicy spamPolicy = new SpamPolicy(Duration.ofSeconds(4));
 
 
-        PolicyEnforcer<EmailNotification, Boolean> enforcer = new PolicyEnforcer<>(
-                List.of(spamPolicy),
-                retryPolicy
-        );
-
+        PolicyEnforcer<EmailNotification, Boolean> enforcer = PolicyEnforcer.<EmailNotification, Boolean>builder()
+                .withValidations(List.of(spamPolicy))
+                .retry(retryPolicy)
+                .build();
 
         try {
 
@@ -97,4 +95,43 @@ public class PolicyEnforcerTest {
 
     }
 
+
+    @Test
+    void testFallback() {
+        EmailNotification notification = new EmailNotification.EmailNotificationBuilder()
+                .setFromEmail("fromEmail")
+                .setSubject("PolicyEnforcerTest")
+                .setBody("PolicyEnforcerTest")
+                .setIsHtml(true)
+                .setToRecipients(List.of(""))
+                .build();
+
+
+        var client = new EmailClientError();
+
+        var clientPass = new EmailClientPass();
+
+
+        RetryPolicy retryPolicy = RetryPolicy.builder()
+                .withDelay(TimeUnit.SECONDS, 1)
+                .withMaxRetries(3)
+                .handle(List.of(EmailNotificationException.class))
+                .build();
+
+
+        SpamPolicy spamPolicy = new SpamPolicy(Duration.ofSeconds(4));
+
+
+        PolicyEnforcer<EmailNotification, Boolean> enforcer = PolicyEnforcer.<EmailNotification, Boolean>builder()
+                .withValidations(List.of(spamPolicy))
+                .retry(retryPolicy)
+                .setFallBack(List.of(client::send,clientPass::send))
+                .build();
+
+        assertTrue(
+                () -> enforcer.run(client::send, notification)
+        );
+
+
+    }
 }

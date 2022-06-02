@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
+import static org.emailclient.policies.RetryPolicy.retry;
+
 public class PolicyEnforcer<T, R> {
 
     private static final Logger logger = LoggerFactory.getLogger(PolicyEnforcer.class);
@@ -15,9 +17,16 @@ public class PolicyEnforcer<T, R> {
 
     private final RetryPolicy retryPolicy;
 
-    public PolicyEnforcer(List<IValidatePolicy<T>> validatePolicies, RetryPolicy retryPolicy) {
+    private final List<Function<T, R>> fallBack;
+
+    public PolicyEnforcer(
+            List<IValidatePolicy<T>> validatePolicies,
+            RetryPolicy retryPolicy,
+            List<Function<T, R>> fallBack
+    ) {
         this.validatePolicies = validatePolicies;
         this.retryPolicy = retryPolicy;
+        this.fallBack = fallBack;
     }
 
 
@@ -28,13 +37,25 @@ public class PolicyEnforcer<T, R> {
         validate(t);
 
         try {
+
             return f.apply(t);
+
         } catch (Exception ex) {
 
-            return retry(f, t, ex);
+            if (retryPolicy == null) {
+                throw ex;
+            }
 
+            try {
+                return retry(retryPolicy, f, t, ex);
+            } catch (Exception ex2) {
+
+                if (fallBack != null)
+                    return runFallback(t);
+
+                throw ex2;
+            }
         }
-
     }
 
     public CompletableFuture<R> runAsync(
@@ -74,50 +95,52 @@ public class PolicyEnforcer<T, R> {
 
     }
 
-    private R retry(Function<T, R> f, T t, Exception ex) {
+    private R runFallback(T t) {
 
-        handle(ex);
 
-        int tries = 0;
-        int maxRetries = retryPolicy.getMaxRetries() == 0 ? 3 : retryPolicy.getMaxRetries();
+        logger.info("Starting fallback ...");
 
-        while (tries < maxRetries) {
-
-            //delay
-            try {
-                retryPolicy.getTimeUnit().sleep(retryPolicy.getDelay());
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-
-            logger.debug("retrying..");
-            tries++;
+        for (Function<T, R> trFunction : fallBack) {
 
             try {
-                return f.apply(t);
-            } catch (Exception ex2) {
-
-                logger.error("Error in retry: ", ex);
-
+                return trFunction.apply(t);
+            } catch (Exception ex) {
+                logger.error("Fall Back failure index[{}]", fallBack.indexOf(trFunction));
             }
+
         }
 
-        throw new RuntimeException("Failure: Max retries reached...");
+        throw new RuntimeException("Fallback failed...");
     }
 
-    private void handle(Exception ex) {
-
-        //allow all exceptions
-        if (retryPolicy.getHandle() == null || retryPolicy.getHandle().isEmpty()) {
-            throw new RuntimeException("Policy enforcer could not handle exception", ex);
-        }
-
-        boolean found = retryPolicy.getHandle().stream().anyMatch(ex.getClass()::equals);
-
-        if (!found) {
-            throw new RuntimeException("Policy enforcer could not handle exception", ex);
-        }
-
+    public static <T, R> PolicyEnforcerBuilder<T, R> builder() {
+        return new PolicyEnforcerBuilder<>();
     }
+
+    public static class PolicyEnforcerBuilder<T, R> {
+        private List<IValidatePolicy<T>> validatePolicies;
+        private RetryPolicy retryPolicy;
+        private List<Function<T, R>> fallBack;
+
+        public PolicyEnforcerBuilder<T, R> withValidations(List<IValidatePolicy<T>> validatePolicies) {
+            this.validatePolicies = validatePolicies;
+            return this;
+        }
+
+        public PolicyEnforcerBuilder<T, R> retry(RetryPolicy retryPolicy) {
+            this.retryPolicy = retryPolicy;
+            return this;
+        }
+
+        public PolicyEnforcerBuilder<T, R> setFallBack(List<Function<T, R>> fallBack) {
+            this.fallBack = fallBack;
+            return this;
+        }
+
+        public PolicyEnforcer<T, R> build() {
+            return new PolicyEnforcer<>(validatePolicies, retryPolicy, fallBack);
+        }
+    }
+
 
 }
