@@ -1,11 +1,11 @@
 package org.emailclient.queues;
 
 import org.emailclient.EmailNotification;
-import org.emailclient.IEmailSender;
+import org.emailclient.INotificationSender;
 
 public interface IEmailClientQueue<T> {
     void add(
-            IEmailSender<T> emailSender, EmailNotification notification
+            INotificationSender<T> emailSender, EmailNotification notification
     );
 
     void start();

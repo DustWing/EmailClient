@@ -1,6 +1,6 @@
 package org.emailclient;
 
-public class EmailClientError implements IEmailSender<EmailNotification> {
+public class EmailClientError implements INotificationSender<EmailNotification> {
 
 
 

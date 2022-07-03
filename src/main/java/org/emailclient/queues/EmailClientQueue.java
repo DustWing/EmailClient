@@ -1,7 +1,7 @@
 package org.emailclient.queues;
 
 import org.emailclient.EmailNotification;
-import org.emailclient.IEmailSender;
+import org.emailclient.INotificationSender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +36,7 @@ public class EmailClientQueue implements IEmailClientQueue<EmailNotification> {
 
     @Override
     public void add(
-            IEmailSender<EmailNotification> emailSender, EmailNotification notification
+            INotificationSender<EmailNotification> emailSender, EmailNotification notification
     ) {
 
         this.queue.add(
@@ -94,16 +94,16 @@ public class EmailClientQueue implements IEmailClientQueue<EmailNotification> {
 
     private static class QueueItem {
 
-        private final IEmailSender<EmailNotification> emailSender;
+        private final INotificationSender<EmailNotification> emailSender;
         private final EmailNotification notification;
 
 
-        private QueueItem(IEmailSender<EmailNotification> emailSender, EmailNotification notification) {
+        private QueueItem(INotificationSender<EmailNotification> emailSender, EmailNotification notification) {
             this.emailSender = emailSender;
             this.notification = notification;
         }
 
-        public IEmailSender<EmailNotification> getEmailSender() {
+        public INotificationSender<EmailNotification> getEmailSender() {
             return emailSender;
         }
 

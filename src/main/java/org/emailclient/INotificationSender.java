@@ -1,6 +1,6 @@
 package org.emailclient;
 
-public interface IEmailSender<T> {
+public interface INotificationSender<T> {
 
     boolean send(T t);
 

@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
-public class EmailClient implements IEmailSender<EmailNotification> {
+public class EmailClient implements INotificationSender<EmailNotification> {
 
     final Session session;
 
@@ -198,10 +198,10 @@ public class EmailClient implements IEmailSender<EmailNotification> {
         for (EmailAttachment att : attachments) {
             // Part two is attachment
             final BodyPart attachmentBodyPart = new MimeBodyPart();
-            final DataSource source = new ByteArrayDataSource(att.getContent(), att.getMimeType());
+            final DataSource source = new ByteArrayDataSource(att.content(), att.mimeType());
 
             attachmentBodyPart.setDataHandler(new DataHandler(source));
-            attachmentBodyPart.setFileName(att.getFileName());
+            attachmentBodyPart.setFileName(att.fileName());
 
             multipart.addBodyPart(attachmentBodyPart);
         }
